@@ -1,0 +1,200 @@
+
+Input:
+
+You are a LaTeX expert.
+Your task is to convert each section of a research paper into plain LaTeX **content only**, without including any section titles or metadata.
+
+Below are the paper sections. For each one, convert only the **content** into LaTeX:
+
+---
+Section: title
+
+Adaptive Tail Weighting for Bayesian Optimization of Iterative Learning
+
+---
+
+---
+Section: abstract
+
+Bayesian Optimization for Iterative Learning (BOIL) accelerates hyper-parameter search by feeding a Gaussian process with a single scalar obtained from each training curve. That scalar is produced with a fixed logistic weighting of intermediate observations. Unfortunately, the fixed weights can over-emphasise noisy early iterations or under-value stable late progress, degrading surrogate fidelity in highly non-stationary settings such as deep reinforcement learning. We introduce Adaptive-Tail-Weighted BOIL (ATW-BOIL), a drop-in replacement that learns one additional exponent α≥0 so the compression smoothly tilts toward later, more reliable points. The new score is sα = Σt w t(α)·y t / Σt w t(α) with weights w t(α)=((t/T)+ε)^α·σ(g( t/T − m )). We optimise α jointly with the original logistic midpoint m and growth g by maximising GP marginal likelihood; every other component of BOIL—surrogate, cost-aware acquisition, and virtual observations—remains untouched. Across CartPole-v1, CIFAR-10 and WikiText-2, ATW-BOIL lifts the area-under-best-seen-score curve by roughly 16 % and cuts time-to-target by 17–22 % at only 2.5 % extra overhead. Robustness experiments on Pong, ImageNet-mini and Humanoid confirm consistent gains, improved surrogate calibration, and adaptive α values that correlate with curve noise. A single learned tail weight therefore yields a more trustworthy target for Bayesian optimisation and measurably accelerates hyper-parameter search without complicating the existing framework.
+
+---
+
+---
+Section: introduction
+
+Hyper-parameter optimisation (HPO) remains a major cost driver in modern machine learning. Bayesian Optimisation for Iterative Learning (BOIL) showed that the intermediate trajectory of a training run can be compressed into a single scalar that feeds a Gaussian-process (GP) surrogate, while a cost-aware acquisition decides how long to continue training \cite{nguyen-2019-bayesian}. BOIL’s fixed logistic weighting succeeds on many tasks, yet in highly non-stationary or noisy environments—particularly deep reinforcement learning (RL)—early rewards fluctuate wildly. When those volatile points receive too much emphasis, the compressed target becomes noisy, the GP posterior mis-calibrates, and acquisition decisions slow the search.
+
+We ask a focused question: can curve compression become mildly more adaptive, with no changes to kernels, acquisition rules, or virtual observations, so the surrogate more faithfully represents eventual performance? Adaptive-Tail-Weighted BOIL (ATW-BOIL) answers yes by adding one learnable exponent α≥0. The modified weight w t(α)=((t/T)+ε)^α·σ(g(τ_t−m))—where τ_t=t/T and σ is the logistic sigmoid—retains BOIL’s preference for fast early learning but lets data decide how much to discount unstable beginnings. Joint optimisation of α, the logistic midpoint m and growth g under GP marginal likelihood keeps computational cost negligible and guarantees backwards compatibility: α=0 exactly reproduces BOIL.
+
+Beyond BOIL, alternative HPO paradigms such as neural-network partitioning pursue validation-free marginal-likelihood surrogates \cite{mlodozeniec-2023-hyperparameter}. Those methods alter the optimisation objective, whereas ATW-BOIL stays within the conventional BO loop and simply refines the curve-to-scalar mapping, making it easy to deploy in existing BOIL pipelines.
+
+Comprehensive experiments demonstrate that this single extra degree of freedom is worthwhile. On CartPole-v1, ATW-BOIL reaches the solved threshold 22 % sooner and achieves a slightly higher final reward within an identical compute budget. Similar improvements arise on CIFAR-10 image classification and WikiText-2 language modelling. A second study on Pong, ImageNet-mini and MuJoCo Humanoid confirms robustness: the learned α rises on noisy tasks (≈1.4) and stays low on stable ones (≈0.3), surrogate negative log-likelihood (NLL) drops, and wall-clock overhead is only 2.5 % per iteration.
+
+Contributions
+• We introduce a minimal yet principled extension to BOIL that learns an adaptive tail-weight exponent α≥0 through GP marginal likelihood.
+• We connect tail weighting to a Bayesian variance prior on curve observations, offering an interpretable mechanism that discounts early noise while rewarding rapid learning.
+• We provide an empirical study across six tasks showing 16 % higher area-under-best-seen-score and 17–22 % faster time-to-target, with better surrogate calibration and negligible computational cost.
+• Ablation analyses confirm that learning α is critical and that tail weighting complements, rather than replaces, BOIL’s logistic gate.
+
+Future work includes contextual or feature-based α, task-conditional priors, integration with multi-fidelity schedulers, and coupling to more expressive surrogates, all enabled by the drop-in nature of ATW-BOIL.
+
+---
+
+---
+Section: related_work
+
+Curve-aware Bayesian optimisation methods fall into two broad classes. The first, exemplified by BOIL, compresses a learning curve into a scalar target and applies standard GP-based BO with cost-aware acquisitions \cite{nguyen-2019-bayesian}. BOIL’s logistic weighting balances rapid early progress against late stability but is fixed once its parameters are learned, potentially mis-weighting very noisy starts. ATW-BOIL amends only this compression stage, leaving surrogate and decision logic untouched.
+
+The second class models the temporal dimension explicitly. Freeze-Thaw and Learning-Curve-BO fit parametric or kernel-based curve models, while bandit schedulers such as Hyperband and ASHA allocate budget based on partial training results. These approaches often achieve strong wall-clock efficiency but either lack calibrated uncertainty (bandits) or introduce significant model complexity (parametric curves). ATW-BOIL instead preserves BOIL’s simplicity: a GP over hyper-parameters, no temporal kernels, and cost-aware expected improvement—changing only how the target s(x) is produced.
+
+Validation-free methods pursue different objectives. Neural network partitioning, for instance, optimises hyper-parameters by approximating marginal likelihood without held-out data \cite{mlodozeniec-2023-hyperparameter}. While computationally attractive, those methods re-define the optimisation goal and training protocol. In contrast, ATW-BOIL maintains the standard validation-driven workflow and is therefore complementary: its adaptive compression could feed into more sophisticated surrogates or combine with validation-free objectives in hybrid schemes.
+
+Relative to BOIL, our contribution specifically relaxes the assumption that a single logistic gate can express reliability across diverse curve shapes. By introducing α≥0 and learning it alongside logistic parameters, ATW-BOIL adapts emphasis between early and late iterations, improving surrogate fidelity especially when early noise is high.
+
+---
+
+---
+Section: background
+
+We study hyper-parameter optimisation for iterative learners that output a sequence of performance measurements y₁,…,y_T. BOIL transforms each curve into a scalar score s(x) via a logistic weighting, then fits a Gaussian process f(x)≈s(x) over the hyper-parameter space. A cost-aware expected-improvement acquisition selects both the next configuration and the amount of additional training, while virtual observations allow partial curves to enter the dataset at controlled cost \cite{nguyen-2019-bayesian}.
+
+Formally, let τ_t = t/T denote normalised time. BOIL’s weights are w_t = σ(g(τ_t−m)), where σ is the logistic sigmoid and m, g are learned by maximising GP marginal likelihood. The compressed score is s = Σ_t w_t y_t / Σ_t w_t. This scheme rewards fast initial improvement through the rising flank of the sigmoid while emphasising stability once τ_t exceeds m.
+
+Limitation. Because w_t depends only on τ_t through a fixed sigmoid, all curves receive identical relative emphasis regardless of noise profile. In RL, early returns often have large variance; placing substantial mass on those points injects noise into s, which the GP must model as observation error. A noisier surrogate reduces acquisition confidence and slows optimisation.
+
+Motivation for tail weighting. Later parts of a training curve typically have lower variance and better predict asymptotic performance. We therefore introduce an exponent α≥0 to discount early points according to a simple power law: w_t(α)=((τ_t+ε))^α·σ(g(τ_t−m)). When α=0 the original BOIL compression is recovered; α>0 progressively downweights early iterations. Because α is learned from data, the model automatically adapts to the empirical variance structure of each task, improving the signal-to-noise ratio of the target s_α.
+
+Assumptions. We assume that later observations are, on average, at least as informative as earlier ones—a mild condition satisfied by most monotone or saturating learning curves. No further assumptions are made; all other BOIL mechanics remain in place, ensuring that ATW-BOIL can be adopted without re-engineering.
+
+---
+
+---
+Section: method
+
+Adaptive-Tail-Weighted BOIL modifies the curve-to-scalar mapping while leaving the wider BO pipeline intact.
+
+Compression function. For a curve y and normalised time τ_t=t/T we define
+w_t(α)=((τ_t+ε))^α·σ(g(τ_t−m)), s_α=Σ_t w_t(α)·y_t / Σ_t w_t(α),
+where ε=10⁻⁹ avoids zero weight at τ_t=0, m is the logistic midpoint and g its growth. The exponent α≥0 smoothly tilts mass toward the tail; α=0 yields BOIL exactly.
+
+Parameter learning. Let D={(x_i,s_i)} be the dataset of compressed scores at a given BO iteration. We maximise the GP log marginal likelihood L(θ,ψ|D) with respect to θ={m,g,α} and GP hyper-parameters ψ. Gradients of s_α with respect to θ are computed via automatic differentiation over the soft weights w_t, so optimisation adds negligible overhead: one extra scalar dimension and no additional passes over curves.
+
+Integration with BOIL. Once θ is updated, curves observed so far are re-compressed to produce s_i, the GP is refitted, and cost-aware expected improvement proposes the next (x,budget) pair. Virtual observations and sparse GP options remain exactly as in the original implementation \cite{nguyen-2019-bayesian}. Computing s_α scales linearly with T and is often dominated by simulation or training time, making ATW-BOIL virtually free.
+
+Regularisation. To avoid degeneracy between parameters we bound α∈ and initialise it at 0. Empirically α converges after 8–12 BO iterations and shifts only when the noise characteristics of candidate curves change.
+
+Interpretation. Weighting by (τ_t+ε)^α is equivalent to assuming observation variance Var∝(τ_t+ε)^{−2α}, giving later points lower variance in a Bayesian sense. This improves GP calibration, which in turn yields more reliable acquisition values and faster convergence.
+
+Algorithm summary.
+1 Initialise GP hyper-parameters and θ=(m,g,α=0).
+2 For each BO iteration:
+  a Compress all available curves with current θ to obtain s.
+  b Fit or update GP on (x,s).
+  c Select next configuration and training budget via cost-aware EI.
+  d Run training for the selected budget; log the curve.
+  e Update θ and GP hyper-parameters by maximising marginal likelihood.
+3 Return the best hyper-parameter configuration found within the compute budget.
+
+---
+
+---
+Section: experimental_setup
+
+We follow the experimental strategy outlined in the context, executing two studies.
+
+Study 1 (exp-1-main-multitask). Tasks: CartPole-v1 (Dueling DQN), CIFAR-10 classification, WikiText-2 language modelling. Search spaces mirror those in the original BOIL paper; for CartPole, learning rate ∈, discount γ∈, batch size ∈. All methods—GP-EndScore, BOIL-Original, ATW-BOIL, ATW-fixed-α=0.5, ATW-noLogistic and Hyperband—receive identical wall-clock budgets: 3 GPU-hours for CartPole, 12 hours for CIFAR-10 and WikiText-2. Metrics: (i) area under the best-seen score versus time (AUC-T), (ii) time-to-reach task-specific thresholds (195 reward, 92 % validation accuracy, 34 perplexity), (iii) final performance at budget exhaustion. Five random seeds are run per task and per method.
+
+Study 2 (exp-2-robustness-efficiency). Tasks: Atari Pong, ImageNet-mini and MuJoCo Humanoid-v4. These benchmarks exhibit higher noise or longer horizons, stressing robustness. Experimental protocol, baselines, budgets and metrics replicate Study 1 with ten seeds where feasible. Additional measurements include GP negative log-likelihood on held-out compressed scores, expected calibration error of posterior mean ±2σ, CPU time per BO iteration and memory footprint.
+
+Implementation details. All code builds on the public BOIL repository, replacing only the transform_logistic function with a tail-weighted variant. Parameter bounds are m∈, g∈, α∈. Optimisation uses Adam with learning rate 0.05 for θ and L-BFGS-B for GP hyper-parameters. Sparse GP with up to 2 048 inducing points is enabled for ImageNet-mini and Humanoid. Experiments run on identical NVIDIA 1080 Ti GPUs; CPU time is measured excluding training. Docker containers with fixed CUDA and PyTorch versions ensure reproducibility, and raw logs plus analysis notebooks are released.
+
+---
+
+---
+Section: results
+
+Optimisation quality. Across all six tasks ATW-BOIL consistently outperforms BOIL-Original. In Study 1 the mean AUC-T improvements are CartPole +19.2 %, CIFAR-10 +12.1 % and WikiText-2 +15.4 %, yielding an average gain of 15.6 % (Cohen’s d =0.81). Time-to-threshold drops by 22 %, 19 % and 17 % respectively; a paired Wilcoxon test over six measured targets gives p =2.6×10⁻⁴ after Holm–Bonferroni correction. Final performance at equal budget is slightly higher in every case: CartPole 199.2±0.5 vs 196.7±1.1 reward; CIFAR-10 93.4 %±0.3 vs 92.6 %±0.4 accuracy; WikiText-2 33.1±0.4 vs 34.6±0.5 perplexity.
+
+Robustness and generality. Study 2 confirms gains in noisier regimes. ATW-BOIL reduces time-to-target by 22 % on Pong, 15 % on ImageNet-mini and 22 % on Humanoid. A robustness score measuring performance degradation under noise improves from 0.97±0.05 (BOIL) to 0.88±0.04 (lower is better), with a 73 % win-rate across 45 pairwise comparisons. Learned α adapts: median α≈1.4 on Pong where early variance is high, and α≈0.3 on CIFAR-10 where curves are smoother.
+
+Surrogate metrics. GP NLL on held-out scores drops from 1.82±0.06 to 1.63±0.05, and calibration error within ±2σ falls from 0.14 to 0.09, indicating more trustworthy uncertainty. Sparse GP yields a 45 % memory reduction at <3 % AUC loss, demonstrating scalability.
+
+Computational cost. Per-iteration wall-clock rises marginally: 1.21 s (BOIL) vs 1.24 s (ATW, +2.5 %). GPU memory overhead is <10 MB. Thus efficiency gains in optimisation far outweigh computational expense.
+
+Ablation studies. Fixing α=0.5 captures only ~40 % of full benefit (AUC-T +7 %), proving the importance of learning α. Removing the logistic gate (ATW-noLogistic) loses 3 % AUC and harms robustness, showing that tail weighting and logistic emphasis act synergistically.
+
+Fairness checks. All baselines share acquisition and virtual observations; search spaces, budgets and seeds are identical. Sensitivity analyses across budget scales and search-space sizes show stable improvements, with α typically converging within a dozen BO iterations.
+
+---
+
+---
+Section: conclusion
+
+ATW-BOIL demonstrates that a single adaptive tail-weight exponent is enough to make curve compression substantially more reliable for Bayesian optimisation. By learning how much to trust early versus late training observations, ATW-BOIL achieves around 16 % higher area-under-best-seen-score and 17–22 % faster time-to-target across six diverse tasks, while improving surrogate calibration and adding only negligible computational cost. Because the method leaves BOIL’s surrogate, acquisition and virtual-observation machinery untouched, it can be adopted with a one-line code change.
+
+The study highlights the value of principled yet minimal modifications to existing frameworks. Future research can explore context-dependent or feature-based α, task-informed priors, integration with multi-fidelity schedulers, and coupling with more expressive surrogates. Given its simplicity and effectiveness, Adaptive-Tail-Weighted compression is a practical improvement for any system that already leverages BOIL for hyper-parameter optimisation.
+
+---
+
+
+## LaTeX Formatting Rules:
+- Use \subsection{...} for any subsections within this section.
+    - Subsection titles should be distinct from the section name;
+    - Do not use '\subsection{  }', or other slight variations. Use more descriptive and unique titles.
+    - Avoid excessive subdivision. If a subsection is brief or overlaps significantly with another, consider merging them for clarity and flow.
+
+- For listing contributions, use the LaTeX \begin{itemize}...\end{itemize} format.
+    - Each item should start with a short title in \textbf{...} format.
+    - Avoid using -, *, or other Markdown bullet styles.
+
+- When including tables, use the `tabularx` environment with `\textwidth` as the target width.
+    - At least one column must use the `X` type to enable automatic width adjustment and line breaking.
+    - Include `\hline` at the top, after the header, and at the bottom. Avoid vertical lines unless necessary.
+    - To left-align content in `X` columns, define `
+ewcolumntype{Y}{>{
+aggedrightrraybackslash}X}` using the `array` package.
+
+- When writing pseudocode, use the `algorithm` and `algorithmicx` LaTeX environments.
+    - Only include pseudocode in the `Method` section. Pseudocode is not allowed in any other sections.
+    - Prefer the `\begin{algorithmic}` environment using **lowercase commands** such as `\State`, `\For`, and `\If`, to ensure compatibility and clean formatting.
+    - Pseudocode must represent actual algorithms or procedures with clear logic. Do not use pseudocode to simply rephrase narrative descriptions or repeat what has already been explained in text.
+        - Good Example:
+        ```latex
+        \State Compute transformed tokens: \(	ilde{T} \leftarrow W\,T\)
+        \State Update: \(T_{new} \leftarrow 	ilde{T} + \mu\,T_{prev}\)
+        ```
+- Figures and images are ONLY allowed in the "Results" section.
+    - Use LaTeX float option `[H]` to force placement.
+
+- All figures must be inserted using the following LaTeX format, using a `width` that reflects the filename:
+    ```latex
+    \includegraphics[width=\linewidth]{ images/filename.pdf }
+    ```
+    The `<appropriate-width>` must be selected based on the filename suffix:
+    - If the filename ends with _pair1.pdf or _pair2.pdf, use 0.48\linewidth as the width of each subfigure environment and place the figures side by side using `subcaption` package.
+    - Otherwise (default), use 0.7\linewidth
+
+- **Escaping special characters**:
+    - LaTeX special characters (`#`, `$`, `%`, `&`, `~`, `_`, `^`, `{`, `}`, `\`) must be escaped with a leading backslash when they appear in plain text (e.g., `data\_set`, `C\&C`).
+    - Underscores **must always be escaped** (`\_`) outside math mode, even in filenames (e.g., memory\_profiler), code-style words, itemize lists, or citation contexts.
+
+- Always use ASCII hyphens (`-`) instead of en-dashes (`–`) or em-dashes (`—`) to avoid spacing issues in hyphenated terms.
+- Do not include any of these higher-level commands such as \documentclass{...}, \begin{document}, and \end{document}.
+    - Additionally, avoid including section-specific commands such as \begin{abstract}, \section{  }, or any other similar environment definitions.
+- Do not modify citation placeholders:
+    - Citation placeholders appear in the format [citation_key], where citation_key contains underscores, numbers, and text (e.g., [vaswani_2017_attention], [smith_2023_deep]).
+    - You must preserve these placeholders EXACTLY as they appear in the input text.
+- If no LaTeX conversion is needed, output the content as-is without status messages like [Unchanged].
+Output:
+{
+    "title": "Adaptive Tail Weighting for Bayesian Optimization of Iterative Learning",
+    "abstract": "Bayesian Optimization for Iterative Learning (BOIL) accelerates hyper-parameter search by feeding a Gaussian process with a single scalar obtained from each training curve. That scalar is produced with a fixed logistic weighting of intermediate observations. Unfortunately, the fixed weights can over-emphasise noisy early iterations or under-value stable late progress, degrading surrogate fidelity in highly non-stationary settings such as deep reinforcement learning. We introduce Adaptive-Tail-Weighted BOIL (ATW-BOIL), a drop-in replacement that learns one additional exponent $\\alpha \\ge 0$ so the compression smoothly tilts toward later, more reliable points. The new score is $s_{\\alpha} = \\sum_t w_t(\\alpha)\\,y_t \\/ \\sum_t w_t(\\alpha)$ with weights $w_t(\\alpha)=((t\\/T)+\\varepsilon)^{\\alpha}\\,\\sigma\\big(g( t\\/T - m )\\big)$. We optimise $\\alpha$ jointly with the original logistic midpoint $m$ and growth $g$ by maximising GP marginal likelihood; every other component of BOIL—surrogate, cost-aware acquisition, and virtual observations—remains untouched. Across CartPole-v1, CIFAR-10 and WikiText-2, ATW-BOIL lifts the area-under-best-seen-score curve by roughly 16\\% and cuts time-to-target by 17\\%–22\\% at only 2.5\\% extra overhead. Robustness experiments on Pong, ImageNet-mini and Humanoid confirm consistent gains, improved surrogate calibration, and adaptive $\\alpha$ values that correlate with curve noise. A single learned tail weight therefore yields a more trustworthy target for Bayesian optimisation and measurably accelerates hyper-parameter search without complicating the existing framework.",
+    "introduction": "Hyper-parameter optimisation (HPO) remains a major cost driver in modern machine learning. Bayesian Optimisation for Iterative Learning (BOIL) showed that the intermediate trajectory of a training run can be compressed into a single scalar that feeds a Gaussian-process (GP) surrogate, while a cost-aware acquisition decides how long to continue training \\cite{nguyen-2019-bayesian}. BOIL's fixed logistic weighting succeeds on many tasks, yet in highly non-stationary or noisy environments—particularly deep reinforcement learning (RL)—early rewards fluctuate wildly. When those volatile points receive too much emphasis, the compressed target becomes noisy, the GP posterior mis-calibrates, and acquisition decisions slow the search.\n\nWe ask a focused question: can curve compression become mildly more adaptive, with no changes to kernels, acquisition rules, or virtual observations, so the surrogate more faithfully represents eventual performance? Adaptive-Tail-Weighted BOIL (ATW-BOIL) answers yes by adding one learnable exponent $\\alpha \\ge 0$. The modified weight $w_t(\\alpha)=((t\\/T)+\\varepsilon)^{\\alpha}\\,\\sigma\\big(g(\\tau_t- m)\\big)$—where $\\tau_t=t\\/T$ and $\\sigma$ is the logistic sigmoid—retains BOIL's preference for fast early learning but lets data decide how much to discount unstable beginnings. Joint optimisation of $\\alpha$, the logistic midpoint $m$ and growth $g$ under GP marginal likelihood keeps computational cost negligible and guarantees backwards compatibility: $\\alpha=0$ exactly reproduces BOIL.\n\nBeyond BOIL, alternative HPO paradigms such as neural-network partitioning pursue validation-free marginal-likelihood surrogates \\cite{mlodozeniec-2023-hyperparameter}. Those methods alter the optimisation objective, whereas ATW-BOIL stays within the conventional BO loop and simply refines the curve-to-scalar mapping, making it easy to deploy in existing BOIL pipelines.\n\nComprehensive experiments demonstrate that this single extra degree of freedom is worthwhile. On CartPole-v1, ATW-BOIL reaches the solved threshold 22\\% sooner and achieves a slightly higher final reward within an identical compute budget. Similar improvements arise on CIFAR-10 image classification and WikiText-2 language modelling. A second study on Pong, ImageNet-mini and MuJoCo Humanoid confirms robustness: the learned $\\alpha$ rises on noisy tasks ($\\approx 1.4$) and stays low on stable ones ($\\approx 0.3$), surrogate negative log-likelihood (NLL) drops, and wall-clock overhead is only 2.5\\% per iteration.\n\n\\subsection{Key contributions}\n\\begin{itemize}\n  \\item \\textbf{Adaptive tail-weight exponent:} We introduce a minimal yet principled extension to BOIL that learns an adaptive tail-weight exponent $\\alpha \\ge 0$ through GP marginal likelihood.\n  \\item \\textbf{Bayesian variance prior:} We connect tail weighting to a Bayesian variance prior on curve observations, offering an interpretable mechanism that discounts early noise while rewarding rapid learning.\n  \\item \\textbf{Empirical gains:} We provide an empirical study across six tasks showing 16\\% higher area-under-best-seen-score and 17\\%–22\\% faster time-to-target, with better surrogate calibration and negligible computational cost.\n  \\item \\textbf{Ablation insights:} Ablation analyses confirm that learning $\\alpha$ is critical and that tail weighting complements, rather than replaces, BOIL's logistic gate.\n\\end{itemize}\n\nFuture work includes contextual or feature-based $\\alpha$, task-conditional priors, integration with multi-fidelity schedulers, and coupling to more expressive surrogates, all enabled by the drop-in nature of ATW-BOIL.",
+    "related_work": "Curve-aware Bayesian optimisation methods fall into two broad classes. The first, exemplified by BOIL, compresses a learning curve into a scalar target and applies standard GP-based BO with cost-aware acquisitions \\cite{nguyen-2019-bayesian}. BOIL's logistic weighting balances rapid early progress against late stability but is fixed once its parameters are learned, potentially mis-weighting very noisy starts. ATW-BOIL amends only this compression stage, leaving surrogate and decision logic untouched.\n\nThe second class models the temporal dimension explicitly. Freeze-Thaw and Learning-Curve-BO fit parametric or kernel-based curve models, while bandit schedulers such as Hyperband and ASHA allocate budget based on partial training results. These approaches often achieve strong wall-clock efficiency but either lack calibrated uncertainty (bandits) or introduce significant model complexity (parametric curves). ATW-BOIL instead preserves BOIL's simplicity: a GP over hyper-parameters, no temporal kernels, and cost-aware expected improvement—changing only how the target $s(x)$ is produced.\n\nValidation-free methods pursue different objectives. Neural network partitioning, for instance, optimises hyper-parameters by approximating marginal likelihood without held-out data \\cite{mlodozeniec-2023-hyperparameter}. While computationally attractive, those methods re-define the optimisation goal and training protocol. In contrast, ATW-BOIL maintains the standard validation-driven workflow and is therefore complementary: its adaptive compression could feed into more sophisticated surrogates or combine with validation-free objectives in hybrid schemes.\n\nRelative to BOIL, our contribution specifically relaxes the assumption that a single logistic gate can express reliability across diverse curve shapes. By introducing $\\alpha \\ge 0$ and learning it alongside logistic parameters, ATW-BOIL adapts emphasis between early and late iterations, improving surrogate fidelity especially when early noise is high.",
+    "background": "We study hyper-parameter optimisation for iterative learners that output a sequence of performance measurements $y_1,\\dots,y_T$. BOIL transforms each curve into a scalar score $s(x)$ via a logistic weighting, then fits a Gaussian process $f(x)\\approx s(x)$ over the hyper-parameter space. A cost-aware expected-improvement acquisition selects both the next configuration and the amount of additional training, while virtual observations allow partial curves to enter the dataset at controlled cost \\cite{nguyen-2019-bayesian}.\n\nFormally, let $\\tau_t = t\\/T$ denote normalised time. BOIL's weights are $w_t = \\sigma\\big(g(\\tau_t- m)\\big)$, where $\\sigma$ is the logistic sigmoid and $m, g$ are learned by maximising GP marginal likelihood. The compressed score is $s = \\sum_t w_t\\, y_t \\/ \\sum_t w_t$. This scheme rewards fast initial improvement through the rising flank of the sigmoid while emphasising stability once $\\tau_t$ exceeds $m$.\n\n\\subsection{Limitation}\nBecause $w_t$ depends only on $\\tau_t$ through a fixed sigmoid, all curves receive identical relative emphasis regardless of noise profile. In RL, early returns often have large variance; placing substantial mass on those points injects noise into $s$, which the GP must model as observation error. A noisier surrogate reduces acquisition confidence and slows optimisation.\n\n\\subsection{Motivation for tail weighting}\nLater parts of a training curve typically have lower variance and better predict asymptotic performance. We therefore introduce an exponent $\\alpha \\ge 0$ to discount early points according to a simple power law: $w_t(\\alpha)= (\\tau_t+\\varepsilon)^{\\alpha}\\,\\sigma\\big(g(\\tau_t- m)\\big)$. When $\\alpha=0$ the original BOIL compression is recovered; $\\alpha>0$ progressively downweights early iterations. Because $\\alpha$ is learned from data, the model automatically adapts to the empirical variance structure of each task, improving the signal-to-noise ratio of the target $s_{\\alpha}$.\n\n\\subsection{Assumptions}\nWe assume that later observations are, on average, at least as informative as earlier ones—a mild condition satisfied by most monotone or saturating learning curves. No further assumptions are made; all other BOIL mechanics remain in place, ensuring that ATW-BOIL can be adopted without re-engineering.",
+    "method": "Adaptive-Tail-Weighted BOIL modifies the curve-to-scalar mapping while leaving the wider BO pipeline intact.\n\n\\subsection{Compression function}\nFor a curve $\\{y_t\\}_{t=1}^T$ and normalised time $\\tau_t=t\\/T$ we define\n\\[\n  w_t(\\alpha)=\\big(\\tau_t+\\varepsilon\\big)^{\\alpha}\\,\\sigma\\big(g(\\tau_t- m)\\big),\\quad s_{\\alpha}=\\frac{\\sum_{t=1}^T w_t(\\alpha)\\,y_t}{\\sum_{t=1}^T w_t(\\alpha)},\n\\]\nwhere $\\varepsilon=10^{-9}$ avoids zero weight at $\\tau_t=0$, $m$ is the logistic midpoint and $g$ its growth. The exponent $\\alpha \\ge 0$ smoothly tilts mass toward the tail; $\\alpha=0$ yields BOIL exactly.\n\n\\subsection{Parameter learning}\nLet $\\mathcal{D}=\\{(x_i,s_i)\\}$ be the dataset of compressed scores at a given BO iteration. We maximise the GP log marginal likelihood $\\mathcal{L}(\\theta,\\psi\\mid\\mathcal{D})$ with respect to $\\theta=\\{m,g,\\alpha\\}$ and GP hyper-parameters $\\psi$. Gradients of $s_{\\alpha}$ with respect to $\\theta$ are computed via automatic differentiation over the soft weights $w_t$, so optimisation adds negligible overhead: one extra scalar dimension and no additional passes over curves.\n\n\\subsection{Integration with BOIL}\nOnce $\\theta$ is updated, curves observed so far are re-compressed to produce $s_i$, the GP is refitted, and cost-aware expected improvement proposes the next $(x,\\text{budget})$ pair. Virtual observations and sparse GP options remain exactly as in the original implementation \\cite{nguyen-2019-bayesian}. Computing $s_{\\alpha}$ scales linearly with $T$ and is often dominated by simulation or training time, making ATW-BOIL virtually free.\n\n\\subsection{Regularisation}\nTo avoid degeneracy between parameters we bound $\\alpha$ and initialise it at $0$. Empirically $\\alpha$ converges after 8–12 BO iterations and shifts only when the noise characteristics of candidate curves change.\n\n\\subsection{Interpretation}\nWeighting by $(\\tau_t+\\varepsilon)^{\\alpha}$ is equivalent to assuming observation variance $\\operatorname{Var}(y_t) \\propto (\\tau_t+\\varepsilon)^{-2\\alpha}$, giving later points lower variance in a Bayesian sense. This improves GP calibration, which in turn yields more reliable acquisition values and faster convergence.\n\n\\subsection{Algorithmic summary}\n\\begin{algorithm}[H]\n\\caption{ATW-BOIL within Bayesian optimisation}\n\\begin{algorithmic}[1]\n  \\State Initialise GP hyper-parameters and $\\theta \\leftarrow (m,g,\\alpha=0)$\n  \\For{each BO iteration}\n    \\State Compress all available curves with current $\\theta$ to obtain $s_i = s_{\\alpha}(y^{(i)})$\n    \\State Fit or update GP on $(x_i, s_i)$ and update $\\psi$\n    \\State Select next configuration $x_{\\text{next}}$ and training budget via cost-aware EI\n    \\State Run training for the selected budget; log the partial or full curve $y^{\\text{new}}$\n    \\State Update $\\theta$ and $\\psi$ by maximising GP marginal likelihood on the augmented dataset\n  \\EndFor\n  \\State \\Return the best hyper-parameter configuration found within the compute budget\n\\end{algorithmic}\n\\end{algorithm}",
+    "experimental_setup": "We follow the experimental strategy outlined in the context, executing two studies.\n\nStudy 1 (exp-1-main-multitask). Tasks: CartPole-v1 (Dueling DQN), CIFAR-10 classification, WikiText-2 language modelling. Search spaces mirror those in the original BOIL paper; for CartPole, learning rate $\\in$, discount $\\gamma \\in$, batch size $\\in$. All methods—GP-EndScore, BOIL-Original, ATW-BOIL, ATW-fixed-$\\alpha$=0.5, ATW-noLogistic and Hyperband—receive identical wall-clock budgets: 3 GPU-hours for CartPole, 12 hours for CIFAR-10 and WikiText-2. Metrics: (i) area under the best-seen score versus time (AUC-T), (ii) time-to-reach task-specific thresholds (195 reward, 92\\% validation accuracy, 34 perplexity), (iii) final performance at budget exhaustion. Five random seeds are run per task and per method.\n\nStudy 2 (exp-2-robustness-efficiency). Tasks: Atari Pong, ImageNet-mini and MuJoCo Humanoid-v4. These benchmarks exhibit higher noise or longer horizons, stressing robustness. Experimental protocol, baselines, budgets and metrics replicate Study 1 with ten seeds where feasible. Additional measurements include GP negative log-likelihood on held-out compressed scores, expected calibration error of posterior mean $\\pm 2\\sigma$, CPU time per BO iteration and memory footprint.\n\nImplementation details. All code builds on the public BOIL repository, replacing only the transform\\_logistic function with a tail-weighted variant. Parameter bounds are $m\\in$, $g\\in$, $\\alpha\\in$. Optimisation uses Adam with learning rate 0.05 for $\\theta$ and L-BFGS-B for GP hyper-parameters. Sparse GP with up to 2\\,048 inducing points is enabled for ImageNet-mini and Humanoid. Experiments run on identical NVIDIA 1080 Ti GPUs; CPU time is measured excluding training. Docker containers with fixed CUDA and PyTorch versions ensure reproducibility, and raw logs plus analysis notebooks are released.",
+    "results": "Optimisation quality. Across all six tasks ATW-BOIL consistently outperforms BOIL-Original. In Study 1 the mean AUC-T improvements are CartPole $+19.2$\\%, CIFAR-10 $+12.1$\\% and WikiText-2 $+15.4$\\%, yielding an average gain of $15.6$\\% (Cohen's $d = 0.81$). Time-to-threshold drops by 22\\%, 19\\% and 17\\% respectively; a paired Wilcoxon test over six measured targets gives $p = 2.6\\times 10^{-4}$ after Holm–Bonferroni correction. Final performance at equal budget is slightly higher in every case: CartPole $199.2 \\pm 0.5$ vs $196.7 \\pm 1.1$ reward; CIFAR-10 $93.4$\\%$\\pm 0.3$ vs $92.6$\\%$\\pm 0.4$ accuracy; WikiText-2 $33.1 \\pm 0.4$ vs $34.6 \\pm 0.5$ perplexity.\n\nRobustness and generality. Study 2 confirms gains in noisier regimes. ATW-BOIL reduces time-to-target by 22\\% on Pong, 15\\% on ImageNet-mini and 22\\% on Humanoid. A robustness score measuring performance degradation under noise improves from $0.97 \\pm 0.05$ (BOIL) to $0.88 \\pm 0.04$ (lower is better), with a 73\\% win-rate across 45 pairwise comparisons. Learned $\\alpha$ adapts: median $\\alpha \\approx 1.4$ on Pong where early variance is high, and $\\alpha \\approx 0.3$ on CIFAR-10 where curves are smoother.\n\nSurrogate metrics. GP NLL on held-out scores drops from $1.82 \\pm 0.06$ to $1.63 \\pm 0.05$, and calibration error within $\\pm 2\\sigma$ falls from $0.14$ to $0.09$, indicating more trustworthy uncertainty. Sparse GP yields a 45\\% memory reduction at $<3$\\% AUC loss, demonstrating scalability.\n\nComputational cost. Per-iteration wall-clock rises marginally: $1.21$ s (BOIL) vs $1.24$ s (ATW, $+2.5$\\%). GPU memory overhead is $<10$ MB. Thus efficiency gains in optimisation far outweigh computational expense.\n\nAblation studies. Fixing $\\alpha=0.5$ captures only $\\sim 40$\\% of full benefit (AUC-T $+7$\\%), proving the importance of learning $\\alpha$. Removing the logistic gate (ATW-noLogistic) loses 3\\% AUC and harms robustness, showing that tail weighting and logistic emphasis act synergistically.\n\nFairness checks. All baselines share acquisition and virtual observations; search spaces, budgets and seeds are identical. Sensitivity analyses across budget scales and search-space sizes show stable improvements, with $\\alpha$ typically converging within a dozen BO iterations.",
+    "conclusion": "ATW-BOIL demonstrates that a single adaptive tail-weight exponent is enough to make curve compression substantially more reliable for Bayesian optimisation. By learning how much to trust early versus late training observations, ATW-BOIL achieves around 16\\% higher area-under-best-seen-score and 17\\%–22\\% faster time-to-target across six diverse tasks, while improving surrogate calibration and adding only negligible computational cost. Because the method leaves BOIL's surrogate, acquisition and virtual-observation machinery untouched, it can be adopted with a one-line code change.\n\nThe study highlights the value of principled yet minimal modifications to existing frameworks. Future research can explore context-dependent or feature-based $\\alpha$, task-informed priors, integration with multi-fidelity schedulers, and coupling with more expressive surrogates. Given its simplicity and effectiveness, Adaptive-Tail-Weighted compression is a practical improvement for any system that already leverages BOIL for hyper-parameter optimisation."
+}

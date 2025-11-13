@@ -1,0 +1,248 @@
+
+Input:
+
+# Instructions
+You are a scientific research consistency evaluator. Your task is to evaluate a single experiment to determine:
+1. Whether it is consistent with the proposed method and experimental strategy
+2. Whether the results support the main claims (e.g., proposed method outperforms baseline)
+3. Whether it should be included in the research paper
+
+## Scope Constraints
+- Focus ONLY on evaluating consistency between the proposed method and experimental results
+- Do not suggest infrastructure changes (Docker, lock files, etc.)
+- Do not recommend development/testing procedures (unit tests, synthetic graphs, etc.)
+- Do not suggest implementation details or code improvements
+- Do not recommend data release or reproducibility practices
+- Do not require or suggest experiments on actual hardware (e.g., real edge devices, physical deployment)
+- Evaluate only: method-result alignment, experimental design adequacy, result interpretation validity, and statistical rigor within computational/simulation contexts
+
+Based on your analysis, provide:
+1. `consistency_feedback` (str): Detailed feedback explaining the consistency evaluation and suggestions for improvement
+2. `consistency_score` (int): A score from 1-10 indicating the quality and consistency of the experimental design and results
+
+## Evaluation Criteria
+
+### consistency_feedback (str)
+Provide specific feedback focused on **scientific consistency evaluation** and **clearly categorize the source of any issues**:
+
+**Problem Categorization - Identify which area(s) need improvement:**
+
+1. **Experimental Strategy Issues**:
+   - Evaluate if the experimental strategy is fundamentally sound for validating the proposed method
+   - Assess whether the experimental setup provides adequate scope and rigor
+   - Identify if the chosen metrics, baselines, or evaluation approach are appropriate
+
+2. **Implementation Issues**:
+   - Assess whether the generated code correctly implements the described experimental strategy
+   - Identify gaps between what the strategy specifies and what the code actually does
+   - Point out if the implementation fails to follow the experimental design
+
+3. **Result Interpretation Issues**:
+   - Assess alignment between claimed method and actual experimental results
+   - Identify gaps between theoretical claims and empirical evidence
+   - Point out contradictions between expected and observed outcomes
+   - **Critical**: Check if the proposed method demonstrates improvement over baseline
+
+**For each identified issue, clearly specify:**
+- Which category the problem falls into
+- What specific aspect needs improvement
+- How it affects the paper inclusion decision
+
+### consistency_score (int)
+Provide a numerical score (1-10) based on execution status and result quality:
+
+- **1-3: Critical Failure / Not Executed**
+  - The experiment failed to run (e.g., code crash, setup error)
+  - Produced no meaningful output
+  - Implementation was fundamentally flawed, invalidating the results
+  - The primary claims cannot be evaluated
+
+- **4-5: Executed, but Poor or Negative Results**
+  - The experiment ran correctly, but the results are negative
+  - The proposed method performs worse than or shows no meaningful improvement over the baseline
+  - The results contradict or fail to support the primary claims
+
+- **6-7: Executed, Positive but Not Conclusive Results**
+  - The experiment ran correctly and shows clear positive improvement over the baseline
+  - Results align with the primary claims
+  - Evidence is weakened by minor issues in scientific rigor (e.g., single-seed runs, lack of statistical tests, limited scope)
+  - The results are suggestive but not definitive
+
+- **8-10: Executed, Conclusive and High-Impact Results**
+  - The experiment ran correctly and provides strong, reliable evidence supporting the primary claims
+  - Results are clearly superior to the baseline
+  - Experimental design demonstrates high scientific rigor (e.g., multiple runs, fair comparisons, statistical validation)
+  - Score of 9-10 indicates particularly impactful and insightful magnitude of improvement
+
+## Context
+
+**Proposed Method:** {
+    "Open Problems": "BOIL compresses every training-curve y1:T into a single scalar using a fixed logistic weighting. \n1. The fixed weighting can over-emphasise noisy early iterations or under-value late stable progress, especially in very non-stationary DRL curves.\n2. The cost–aware acquisition already estimates monetary/CPU cost but ignores the reliability of the compressed target that feeds the GP.\nGoal: keep BOIL’s overall framework but make the compression more adaptive with one extra scalar hyper-parameter.",
+    "Methods": "Adaptive-Tail-Weighted BOIL (ATW-BOIL)\nMinimal change: introduce one additional weight exponent α≥0 in the learning-curve compression.\nCompressed score  sα  for a curve y1:T is\n   sα =  Σ_{t=1}^{T}  w_t(α) · y_t  /  Σ_{t=1}^{T} w_t(α)\nwhere  w_t(α)= ((t/T)+ε)^α · σ( (t−m)/g )\nσ is the same logistic sigmoid used in BOIL (with learnt midpoint m and growth g). ε=1e-9 avoids zero.\n• α=0 reproduces the original BOIL (uniform weights after the sigmoid).\n• α>0 smoothly tilts the score toward the tail (later, more reliable points) while still rewarding fast early learning.\nWe simply add α to the GP’s marginal-likelihood optimisation together with m and g (one extra dimension in hyper vector). The rest of the algorithm – GP, cost-sensitive EI, virtual observations – stays unchanged.\nTheoretical motivation: later portions of a curve have higher probability of reflecting asymptotic performance; weighting by (t/T)^α implements a Bayesian prior that later observations have lower variance. Jointly learning α lets the data decide how much early instability should be discounted.",
+    "Experimental Setup": "Baseline: original BOIL.\nDataset/task: CartPole-v1 reinforcement-learning agent (Dueling DQN) — same as paper but only 50 optimisation steps to keep it light.\nSearch space: learning-rate∈[1e-4,1e-2], γ∈[0.8,0.999], batch-size∈[32,256].\nBudget: each HPO method allowed 3×NVidia-1080Ti GPU-hours.\nEvaluation metric: best average reward over 10 evaluation episodes obtained within the budget; wall-clock time to reach 195 average reward (solved). \nComparison: BOIL vs ATW-BOIL (ours). 5 random seeds.",
+    "Experimental Code": "# ---- core change to curve compression ----\nimport numpy as np\n\ndef tail_weighted_logistic(curve, midpoint=0.0, growth=1.0, alpha=0.0):\n    \"\"\"Return single scalar score for a learning curve.\n    curve : 1-d array like, length T\n    \"\"\"\n    curve = np.asarray(curve, dtype=float)\n    T = len(curve)\n    t = np.arange(1, T+1, dtype=float)\n    # logistic part (original BOIL)\n    logistic = 1./(1.+np.exp(-growth*( (t/T) - midpoint)))\n    # NEW tail weight\n    weights = ((t/T)+1e-9)**alpha * logistic\n    weights /= weights.sum()\n    return (weights * curve).sum()\n\n# plug into BOIL by replacing transform_logistic\n\ndef transform_logistic(curves, midpoint=0.0, growth=1.0, alpha=0.0):\n    if isinstance(curves[0], (list, np.ndarray)):\n        return [tail_weighted_logistic(c, midpoint, growth, alpha) for c in curves]\n    else:  # single curve\n        return tail_weighted_logistic(curves, midpoint, growth, alpha)\n\n# During GP hyper-parameter optimisation simply treat [length_x,length_t,midpoint,growth,alpha] as vector\n# Bounds for alpha e.g. [0,3].",
+    "Expected Result": "Across 5 seeds ATW-BOIL reaches the CartPole \"solved\" threshold (~195) about 15-25% sooner (median 14 minutes vs 18 minutes) and finds slightly better hyper-parameters (mean final reward 199.2 vs 196.7). \nArea under best-seen-reward curve vs time is higher for ATW-BOIL in 4/5 runs. Computational overhead is negligible (one extra scalar in optimisation).",
+    "Expected Conclusion": "A single tail-weight exponent lets the compression adapt to the noisiness of early training, yielding a more reliable target for Bayesian optimisation. The modification is conceptually simple (one extra scalar, no new kernels or acquisition functions) yet measurably accelerates hyper-parameter search, demonstrating that careful treatment of learning-curve information can improve efficiency without overhauling existing BO frameworks."
+}
+
+**Overall Experimental Strategy:** Overall Experimental Strategy for Validating ATW-BOIL
+
+0. Guiding Principle
+   Evaluate the proposed adaptive tail-weight against three orthogonal axes that matter for any practical HPO method: (1) optimisation quality, (2) resource efficiency, and (3) reliability / generality.  Every concrete experiment must produce evidence on at least two of these axes and collectively the whole suite must cover all three.
+
+1. Core Hypotheses to Validate
+   H1  Performance:  For a fixed compute budget, ATW-BOIL finds better hyper-parameters (higher task score) and/or reaches a target score sooner than original BOIL and other state-of-the-art (SOTA) curve-aware BO baselines.
+   H2  Efficiency:  The added α dimension does not noticeably increase wall-clock per-iteration overhead; overall GPU-hours are equal or lower for the same final score.
+   H3  Robustness:  Gains hold across tasks with different noise levels, curve shapes and search spaces, and across random seeds.
+   H4  Generalisation:  The single mechanism (learned α) transfers without retuning to supervised, RL and black-box optimisation tasks.
+
+2. Validation Dimensions & Required Evidence
+   a. Quantitative Optimisation Metrics
+      • Best-seen task score vs wall-clock time (area-under-curve, time-to-threshold)
+      • Final score at fixed budget
+      • Number of trials / GPU-hours to reach threshold
+   b. Surrogate-Model Metrics
+      • Negative log-likelihood (NLL) of GP on held-out curve scores
+      • Calibration error of posterior mean ±2σ
+   c. Computational Cost
+      • CPU time per BO iteration (including GP hyper-optimisation)
+      • Memory footprint on surrogate fit (leveraging 2048 GB cap)
+   d. Reliability / Stability
+      • Std-dev of key metrics over ≥10 random seeds
+      • Sensitivity analyses: varying search space size, budget scale, curve length
+   e. Qualitative Insight
+      • Visualise learnt α distribution over optimisation horizon
+      • Weight-heatmaps showing how early/late points are re-weighted
+
+3. Comparative Baselines (must appear in every experiment unless infeasible)
+   B1 Original BOIL (α≡0)
+   B2 Pure GP-BO on end-of-training score (no curve compression)
+   B3 State-of-the-art early-curve methods (e.g., Freeze-Thaw BO, FABOLAS, Learning-Curve-BO)
+   B4 Hyperband / ASHA (non-BO strong baseline for cost-aware HPO)
+   Ablations:
+      A1  ATW-BOIL with fixed α=0.5 (no learning)
+      A2  ATW-BOIL with α learned but logistic removed (test component synergy)
+
+4. Experimental Matrix (Tasks & Noise Levels)
+   Tier-1   Small-scale sanity (CartPole, CIFAR-10 subset, synthetic Branin)
+   Tier-2   Medium RL (Atari), vision (ImageNet-mini), language (Transformer on WikiText-2)
+   Tier-3   Highly non-stationary or long-horizon (MuJoCo Humanoid, large-scale pre-training subset)
+   Each tier increases curve length/variance to stress the method.
+
+5. Resource Budgeting Rules (per experiment)
+   • Identical GPU type (A100) and count for all methods.
+   • Wall-clock cap computed so that original BOIL completes ≤12 h; others get equal time.
+   • Repeat N=10 seeds; report mean±95 % CI.
+
+6. Success Criteria
+   Primary: ATW-BOIL improves median area-under-best-seen-score curve by ≥10 % AND/OR reduces time-to-threshold by ≥15 % with p<0.05 against B1.
+   Secondary: No more than 5 % increase in per-iteration wall-clock; surrogate NLL not worse than B1; improvements consistent (wins ≥70 % of seeds).
+   Tertiary: Positive or neutral results on robustness & generalisation tiers.
+
+7. Statistical Protocol
+   • Use paired tests (Wilcoxon signed-rank) for time-to-threshold and AUC.
+   • Holm–Bonferroni correction across tasks.
+   • Report effect sizes (Cohen’s d) alongside p-values.
+
+8. Reporting & Visualisation Standards
+   • For each task: log-scaled time-vs-score plots with median & inter-quartile ribbon.
+   • Aggregate win-rate tables.
+   • Surrogate calibration plots.
+   • Resource-usage bars (GPU-hours, CPU-hours, RAM).
+
+9. Reproducibility Infrastructure
+   • Containerised code (Docker), CUDA 11, PyTorch 2.x.
+   • Deterministic GPU seeds where hardware allows.
+   • Public release of raw curve logs, config files, and analysis notebooks.
+
+10. Risk Mitigation & Contingencies
+   • If α optimisation becomes numerically unstable, fall back to log-domain re-parameterisation.
+   • If GP scales poorly on long curves, enable sparse GP with inducing points ≤2048 (fits in 80 GB VRAM).
+
+This umbrella strategy ensures every forthcoming experiment consistently examines ATW-BOIL’s impact on quality, efficiency, and robustness, benchmarks it against credible alternatives, and validates claims through both statistical rigor and interpretability across a spectrum of realistic scenarios.
+
+## Current Experiment to Evaluate
+
+**Experiment ID:** exp-1-main-multitask
+
+**Experiment Description:** Objective / Hypothesis:
+Validate H1 (performance) & H2 (efficiency) on a representative multi-task suite.  Test whether learning α improves optimisation quality and time-to-threshold without extra cost.
+
+Tasks & Models:
+• CartPole-v1  – Dueling DQN (PyTorch)
+• CIFAR-10 (32×32) – ResNet-18
+• WikiText-2 language-model – 2-layer Transformer (d_model=384)
+
+Datasets & Pre-processing:
+• CartPole: standard OpenAI Gym; episodic reward smoothed over 10 eval episodes.
+• CIFAR-10: per-pixel mean/std normalisation; optional Cutout.
+• WikiText-2: tokenise with Moses; vocab size 33k; sentences ≤512 tokens.
+
+Search Spaces (per task):
+• Learning rate, γ/weight-decay, batch size, network-width, dropout.
+3–6 dims, all continuous/log-uniform or categorical.
+
+Budget & Splits:
+• Each HPO method gets identical wall-clock cap that lets BOIL finish ≤12h on 1×A100 (CartPole 3h, CIFAR 8h, WikiText 10h).
+• Train/val/test: 80/10/10 (CIFAR, WikiText); RL uses eval episodes.
+
+Seeds & Aggregation:
+• 10 independent seeds; report mean±95% CI.
+• Selection by best validation score; early stopping patience 20 epochs.
+
+Evaluation Metrics:
+Primary – Area-under-best-seen-score vs time (AUC-T); Time-to-threshold (≥195 reward / 92% accuracy / 34 ppl).
+Secondary – final test score at fixed budget, surrogate GP NLL.
+
+Comparisons (run_variations):
+1  GP-EndScore: vanilla GP-BO using final epoch score only.
+2  BOIL-Original: Sigmoid compression, α≡0.
+3  ATW-BOIL: proposed method (α learned).
+4  ATW-BOIL-fixedAlpha0.5: ablation A1.
+5  Hyperband-ASHA: strong non-BO baseline.
+
+Hyper-param Analysis:
+Grid-scan α∈{0,0.5,1,2} for fixed variant; record learned α trajectory.
+
+Robustness Checks:
+• Repeat with 25% label-noise on CIFAR-10; OOD validation (CIFAR-10-C corruption severity 3).
+• Report win-rate across noisy vs clean.
+
+Resource Metrics:
+• Log CPU/GPU time per BO iteration, total GPU-hours, peak memory.  Use PyTorch profiler and nvidia-smi.
+• FLOPs per model recorded via fvcore.
+
+Example Code Snippet:
+```
+from boil import BOIL, ATWBOIL
+optimizer = ATWBOIL(search_space, gp_kernel='ARD-Matern52',
+                    alpha_init=0.3, alpha_bounds=(0,3))
+for step in range(budget):
+    hp = optimizer.suggest()
+    score, curve = train_eval(hp)      # returns per-epoch list
+    optimizer.observe(hp, curve)
+```
+Success Criterion:
+≥10% AUC-T improvement & ≥15% faster threshold attainment vs BOIL-Original with p<0.05 on ≥2/3 tasks; ≤5% overhead/iteration.
+
+Infrastructure:
+Docker + CUDA11.8; PyTorch 2.1; deterministic cuDNN; results persisted in MLflow tracking.
+
+
+**Run Variations:** ['GP-EndScore', 'BOIL-Original', 'ATW-BOIL', 'ATW-BOIL-fixedAlpha0.5', 'Hyperband-ASHA']
+
+**Generated Code:** {"evaluate_py": "", "full_experiment_yaml": "", "main_py": "", "model_py": "", "preprocess_py": "", "pyproject_toml": "", "smoke_test_yaml": "", "train_py": ""}
+
+**Experimental Results:**
+
+- Result: 
+- Error: 
+- Images: []
+
+
+**Primary Goal**: Evaluate whether this specific experiment is consistent, supports the main claims, and should be included in the research paper.
+Output:
+{
+    "consistency_feedback": "Critical Finding: the experiment exp-1-main-multitask did not actually run – all result fields are empty and no code was produced (evaluate_py, main_py, … are empty strings).  Therefore no numerical evidence exists to evaluate hypotheses H1–H2 or the success criteria (≥10 % AUC-T gain, ≥15 % faster threshold, p<0.05).\n\nProblem Categorisation\n1. Implementation Issues\n   • The implementation of the experiment is missing; consequently the proposed adaptive compression (α) is never exercised.  Without execution the gap between strategy and practice is maximal.\n2. Result Interpretation Issues\n   • Because no metrics were generated, any interpretation would be speculative and cannot support the claims of improved optimisation quality or efficiency.\n3. Experimental Strategy Issues (minor)\n   • The written design itself is sound and aligns with the umbrella strategy (appropriate baselines, metrics, seed count).  However, the absence of execution means its adequacy cannot be judged empirically.\n\nImpact on Inclusion Decision\n• The experiment currently provides zero empirical support for the paper’s main claims; including it would weaken the manuscript and invite major reviewer criticism.  It must be rerun and produce complete, statistically analysed results before inclusion.\n\nRecommendations to Reach Consistency (limited strictly to evaluation scope)\n• Supply executable code that implements the described HPO loop for all five run_variations and three tasks.\n• Collect and report the primary metrics (AUC-T, time-to-threshold) with 10-seed statistics and the paired Wilcoxon tests vs BOIL-Original.\n• Include resource-usage logs to confirm ≤5 % per-iteration overhead.\n• Only after these data are available can the experiment be assessed for consistency with the proposed method and claims.",
+    "consistency_score": 1
+}

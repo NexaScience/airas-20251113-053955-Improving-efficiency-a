@@ -95,7 +95,136 @@
         "Atari PongNoFrameskip-v4",
         "ImageNet-mini",
         "MuJoCo Humanoid-v4"
-      ]
+      ],
+      "external_resources": {
+        "hugging_face": {
+          "models": [
+            {
+              "id": "winkin119/DuelingDQN-1d-LunarLander-v3",
+              "author": "winkin119",
+              "sha": "6a544dd121454d8f30f16c11e7a4652c69ce6bc5",
+              "created_at": "2025-08-03T14:19:26+00:00",
+              "last_modified": "2025-08-03T14:19:29+00:00",
+              "private": false,
+              "gated": false,
+              "disabled": false,
+              "downloads": 1,
+              "likes": 0,
+              "siblings": [
+                {
+                  "rfilename": ".gitattributes"
+                },
+                {
+                  "rfilename": "README.md"
+                },
+                {
+                  "rfilename": "eval_result.json"
+                },
+                {
+                  "rfilename": "full_model.pt"
+                },
+                {
+                  "rfilename": "params.json"
+                },
+                {
+                  "rfilename": "replay.mp4"
+                },
+                {
+                  "rfilename": "state_dict.pt"
+                },
+                {
+                  "rfilename": "tensorboard/events.out.tfevents.1753878949.winkindeMacBook-Air.local.77292.0"
+                }
+              ],
+              "card_data": {
+                "language": [],
+                "tags": [
+                  "LunarLander-v3",
+                  "dueling dqn",
+                  "reinforcement-learning",
+                  "custom-implementation",
+                  "deep-q-learning",
+                  "pytorch"
+                ],
+                "datasets": [],
+                "task_categories": [],
+                "size_categories": [],
+                "metrics": [],
+                "widget": []
+              },
+              "tags": [
+                "tensorboard",
+                "LunarLander-v3",
+                "dueling dqn",
+                "reinforcement-learning",
+                "custom-implementation",
+                "deep-q-learning",
+                "pytorch",
+                "model-index",
+                "region:us"
+              ],
+              "pipeline_tag": "reinforcement-learning",
+              "readme": "---\nenv_name: LunarLander-v3\ntags:\n- LunarLander-v3\n- dueling dqn\n- reinforcement-learning\n- custom-implementation\n- deep-q-learning\n- pytorch\nmodel-index:\n- name: DuelingDQN-1d-LunarLander-v3\n  results:\n  - task:\n      type: reinforcement-learning\n      name: reinforcement-learning\n    dataset:\n      name: LunarLander-v3\n      type: LunarLander-v3\n    metrics:\n    - type: mean_reward\n      value: 274.78 +/- 16.60\n      name: mean_reward\n      verified: false\n---\n\n# **Dueling DQN** Agent playing **LunarLander-v3**\nThis is a trained model of a **Dueling DQN** agent playing **LunarLander-v3**.\n\n## Usage\n### create the conda env in https://github.com/GeneHit/drl_practice\n```bash\nconda create -n drl python=3.10\nconda activate drl\npython -m pip install -r requirements.txt\n```\n\n### play with full model\n```python\n# load the full model\nmodel = load_from_hub(repo_id=\"winkin119/DuelingDQN-1d-LunarLander-v3\", filename=\"full_model.pt\")\n\n# Create the environment. \nenv = gym.make(\"LunarLander-v3\")\nstate, _ = env.reset()\naction = model.action(state)\n...\n```\nThere is also a state dict version of the model, you can check the corresponding chapter in the repo.\n",
+              "extracted_code": "# load the full model\nmodel = load_from_hub(repo_id=\"winkin119/DuelingDQN-1d-LunarLander-v3\", filename=\"full_model.pt\")\n\n# Create the environment.\nenv = gym.make(\"LunarLander-v3\")\nstate, _ = env.reset()\naction = model.action(state)\n..."
+            }
+          ],
+          "datasets": [
+            {
+              "id": "NathanGavenski/CartPole-v1",
+              "author": "NathanGavenski",
+              "sha": "523ca21d86ef6844bad6e520cfa364ad132f1ed1",
+              "created_at": "2023-10-24T17:30:02+00:00",
+              "last_modified": "2024-06-11T13:50:17+00:00",
+              "private": false,
+              "gated": false,
+              "disabled": false,
+              "downloads": 226,
+              "likes": 4,
+              "siblings": [
+                {
+                  "rfilename": ".gitattributes"
+                },
+                {
+                  "rfilename": "README.md"
+                },
+                {
+                  "rfilename": "teacher.jsonl"
+                }
+              ],
+              "card_data": {
+                "license": "mit",
+                "language": [],
+                "tags": [
+                  "Imitation Learning",
+                  "Expert Trajectory"
+                ],
+                "datasets": [],
+                "task_categories": [],
+                "size_categories": [
+                  "10M<n<100M"
+                ],
+                "metrics": [],
+                "widget": []
+              },
+              "tags": [
+                "license:mit",
+                "size_categories:100K<n<1M",
+                "format:json",
+                "modality:tabular",
+                "library:datasets",
+                "library:pandas",
+                "library:mlcroissant",
+                "library:polars",
+                "region:us",
+                "Imitation Learning",
+                "Expert Trajectory"
+              ],
+              "readme": "---\nlicense: mit\ntags:\n- Imitation Learning\n- Expert Trajectory\npretty_name: CartPole-v1 Expert Dataset\nsize_categories:\n- 10M<n<100M\n---\n\n# CartPole-v1 - Imitation Learning Datasets\n\nThis is a dataset created by [Imitation Learning Datasets](https://github.com/NathanGavenski/IL-Datasets) project. \nIt was created by using Stable Baselines weights from a PPO policy from [HuggingFace](https://huggingface.co/sb3/ppo-CartPole-v1).\n\n## Description\n\nThe dataset consists of 1,000 episodes with an average episodic reward of 500.\nEach entry consists of:\n```\nobs (list): observation with length 4.\naction (int): action (0 or 1).\nreward (float): reward point for that timestep.\nepisode_returns (bool): if that state was the initial timestep for an episode.\n```\n\n## Usage\n\nFeel free to download and use the `teacher.jsonl` dataset as you please.\nIf you are interested in using our PyTorch Dataset implementation, feel free to check the [IL Datasets](https://github.com/NathanGavenski/IL-Datasets/blob/main/src/imitation_datasets/dataset/dataset.py) project.\nThere, we implement a base Dataset that downloads this dataset and all other datasets directly from HuggingFace.\nThe Baseline Dataset also allows for more control over train and test splits and how many episodes you want to use (in cases where the 1k episodes are not necessary).\n\n## Citation\n\n```{bibtex}\n@inproceedings{gavenski2024ildatasets,\n  author = {Gavenski, Nathan and Luck, Michael and Rodrigues, Odinaldo},\n  title = {Imitation Learning Datasets: A Toolkit For Creating Datasets, Training Agents and Benchmarking},\n  year = {2024},\n  isbn = {9798400704864},\n  publisher = {International Foundation for Autonomous Agents and Multiagent Systems},\n  address = {Richland, SC},\n  abstract = {Imitation learning field requires expert data to train agents in a task. Most often, this learning approach suffers from the absence of available data, which results in techniques being tested on its dataset. Creating datasets is a cumbersome process requiring researchers to train expert agents from scratch, record their interactions and test each benchmark method with newly created data. Moreover, creating new datasets for each new technique results in a lack of consistency in the evaluation process since each dataset can drastically vary in state and action distribution. In response, this work aims to address these issues by creating Imitation Learning Datasets, a toolkit that allows for: (i) curated expert policies with multithreaded support for faster dataset creation; (ii) readily available datasets and techniques with precise measurements; and (iii) sharing implementations of common imitation learning techniques. Demonstration link: https://nathangavenski.github.io/#/il-datasets-video},\n  booktitle = {Proceedings of the 23rd International Conference on Autonomous Agents and Multiagent Systems},\n  pages = {2800–2802},\n  numpages = {3},\n  keywords = {benchmarking, dataset, imitation learning},\n  location = {<conf-loc>, <city>Auckland</city>, <country>New Zealand</country>, </conf-loc>},\n  series = {AAMAS '24}\n}\n```",
+              "extracted_code": ""
+            }
+          ]
+        }
+      }
     }
   },
   "idea_info_history": [

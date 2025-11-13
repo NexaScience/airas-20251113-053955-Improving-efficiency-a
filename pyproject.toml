@@ -1,1 +1,23 @@
-# Please list the required python packages.
+[project]
+name = "atw_boil_common_core"
+version = "0.1.0"
+description = "Common core foundation for ATW-BOIL experiments"
+requires-python = ">=3.9"
+
+[project.dependencies]
+torch = "*"
+torchvision = "*"
+torchtext = "*"
+gym = "*"
+botorch = "*"
+gpytorch = "*"
+pyyaml = "*"
+matplotlib = "*"
+seaborn = "*"
+numpy = "*"
+scipy = "*"
+pandas = "*"
+tqdm = "*"
+
+[build-system]
+requires = ["setuptools", "wheel"]

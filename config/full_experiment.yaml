@@ -1,0 +1,305 @@
+experiments:
+  # ------------------------------ CartPole-v1 ------------------------------ #
+  - run_id: cartpole_gp_endscore
+    seed: 0
+    algorithm: gp-endscore
+    task:
+      name: cartpole
+      train_episodes: 50
+      eval_interval: 5
+      max_steps_per_episode: 500
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 1e-2]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+      batch_size: {type: uniform, bounds: [32, 256]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+  - run_id: cartpole_boil_original
+    seed: 0
+    algorithm: boil
+    task:
+      name: cartpole
+      train_episodes: 50
+      eval_interval: 5
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 1e-2]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+      batch_size: {type: uniform, bounds: [32, 256]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+  - run_id: cartpole_atw_boil
+    seed: 0
+    algorithm: atw-boil
+    task:
+      name: cartpole
+      train_episodes: 50
+      eval_interval: 5
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 1e-2]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+      batch_size: {type: uniform, bounds: [32, 256]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.3
+      alpha_bounds: [0.0, 3.0]
+
+  - run_id: cartpole_atw_boil_fixed_alpha05
+    seed: 0
+    algorithm: atw-boil
+    task:
+      name: cartpole
+      train_episodes: 50
+      eval_interval: 5
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 1e-2]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+      batch_size: {type: uniform, bounds: [32, 256]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.5
+      alpha_bounds: [0.5, 0.5]
+
+  - run_id: cartpole_hyperband_asha
+    seed: 0
+    algorithm: hyperband-asha
+    task:
+      name: cartpole
+      train_episodes: 50
+      eval_interval: 5
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 1e-2]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+      batch_size: {type: uniform, bounds: [32, 256]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+  # ------------------------------ CIFAR-10 ------------------------------ #
+  - run_id: cifar10_gp_endscore
+    seed: 0
+    algorithm: gp-endscore
+    task:
+      name: cifar10
+      epochs: 5
+      train_subset_fraction: 0.2
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 1e-1]}
+      weight_decay: {type: log_uniform, bounds: [1e-5, 1e-2]}
+      batch_size: {type: uniform, bounds: [32, 256]}
+      dropout: {type: uniform, bounds: [0.0, 0.5]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+  - run_id: cifar10_boil_original
+    seed: 0
+    algorithm: boil
+    task:
+      name: cifar10
+      epochs: 5
+      train_subset_fraction: 0.2
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 1e-1]}
+      weight_decay: {type: log_uniform, bounds: [1e-5, 1e-2]}
+      batch_size: {type: uniform, bounds: [32, 256]}
+      dropout: {type: uniform, bounds: [0.0, 0.5]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+  - run_id: cifar10_atw_boil
+    seed: 0
+    algorithm: atw-boil
+    task:
+      name: cifar10
+      epochs: 5
+      train_subset_fraction: 0.2
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 1e-1]}
+      weight_decay: {type: log_uniform, bounds: [1e-5, 1e-2]}
+      batch_size: {type: uniform, bounds: [32, 256]}
+      dropout: {type: uniform, bounds: [0.0, 0.5]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.3
+      alpha_bounds: [0.0, 3.0]
+
+  - run_id: cifar10_atw_boil_fixed_alpha05
+    seed: 0
+    algorithm: atw-boil
+    task:
+      name: cifar10
+      epochs: 5
+      train_subset_fraction: 0.2
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 1e-1]}
+      weight_decay: {type: log_uniform, bounds: [1e-5, 1e-2]}
+      batch_size: {type: uniform, bounds: [32, 256]}
+      dropout: {type: uniform, bounds: [0.0, 0.5]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.5
+      alpha_bounds: [0.5, 0.5]
+
+  - run_id: cifar10_hyperband_asha
+    seed: 0
+    algorithm: hyperband-asha
+    task:
+      name: cifar10
+      epochs: 5
+      train_subset_fraction: 0.2
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 1e-1]}
+      weight_decay: {type: log_uniform, bounds: [1e-5, 1e-2]}
+      batch_size: {type: uniform, bounds: [32, 256]}
+      dropout: {type: uniform, bounds: [0.0, 0.5]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+  # ------------------------------ WikiText-2 ------------------------------ #
+  - run_id: wikitext2_gp_endscore
+    seed: 0
+    algorithm: gp-endscore
+    task:
+      name: wikitext2
+      epochs: 5
+      train_tokens: 60000
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-5, 1e-2]}
+      weight_decay: {type: log_uniform, bounds: [0.0, 1e-2]}
+      dropout: {type: uniform, bounds: [0.0, 0.5]}
+      d_model: {type: uniform, bounds: [128, 512]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+  - run_id: wikitext2_boil_original
+    seed: 0
+    algorithm: boil
+    task:
+      name: wikitext2
+      epochs: 5
+      train_tokens: 60000
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-5, 1e-2]}
+      weight_decay: {type: log_uniform, bounds: [0.0, 1e-2]}
+      dropout: {type: uniform, bounds: [0.0, 0.5]}
+      d_model: {type: uniform, bounds: [128, 512]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+  - run_id: wikitext2_atw_boil
+    seed: 0
+    algorithm: atw-boil
+    task:
+      name: wikitext2
+      epochs: 5
+      train_tokens: 60000
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-5, 1e-2]}
+      weight_decay: {type: log_uniform, bounds: [0.0, 1e-2]}
+      dropout: {type: uniform, bounds: [0.0, 0.5]}
+      d_model: {type: uniform, bounds: [128, 512]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.3
+      alpha_bounds: [0.0, 3.0]
+
+  - run_id: wikitext2_atw_boil_fixed_alpha05
+    seed: 0
+    algorithm: atw-boil
+    task:
+      name: wikitext2
+      epochs: 5
+      train_tokens: 60000
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-5, 1e-2]}
+      weight_decay: {type: log_uniform, bounds: [0.0, 1e-2]}
+      dropout: {type: uniform, bounds: [0.0, 0.5]}
+      d_model: {type: uniform, bounds: [128, 512]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.5
+      alpha_bounds: [0.5, 0.5]
+
+  - run_id: wikitext2_hyperband_asha
+    seed: 0
+    algorithm: hyperband-asha
+    task:
+      name: wikitext2
+      epochs: 5
+      train_tokens: 60000
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-5, 1e-2]}
+      weight_decay: {type: log_uniform, bounds: [0.0, 1e-2]}
+      dropout: {type: uniform, bounds: [0.0, 0.5]}
+      d_model: {type: uniform, bounds: [128, 512]}
+    hpo:
+      max_trials: 20
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+after_all:
+  generate_calibration_plots: true
+  statistical_tests: true
+  export_csv: true
+  # etc.

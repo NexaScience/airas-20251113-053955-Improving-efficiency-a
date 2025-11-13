@@ -1,0 +1,88 @@
+# Smoke-test configuration covering *all* algorithmic variations on a very
+# lightweight synthetic task. Each run finishes in <2 s on CPU.
+
+experiments:
+  - run_id: smoke_boil_original
+    seed: 1
+    algorithm: boil-original
+    task:
+      name: dummy
+      curve_length: 40
+      noise_std: 1.5
+    search_space:
+      lr: {type: log_uniform, bounds: [0.0001, 0.01]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+    hpo: {max_trials: 6}
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+  - run_id: smoke_atw_boil
+    seed: 2
+    algorithm: atw-boil
+    task:
+      name: dummy
+      curve_length: 40
+      noise_std: 1.5
+    search_space:
+      lr: {type: log_uniform, bounds: [0.0001, 0.01]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+    hpo: {max_trials: 6}
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.5
+      alpha_bounds: [0.0, 3.0]
+
+  - run_id: smoke_atw_boil_no_logistic
+    seed: 3
+    algorithm: atw-boil-nologistic
+    task:
+      name: dummy
+      curve_length: 40
+      noise_std: 1.5
+    search_space:
+      lr: {type: log_uniform, bounds: [0.0001, 0.01]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+    hpo: {max_trials: 6}
+    compressor:
+      alpha: 0.5
+      alpha_bounds: [0.0, 3.0]
+
+  - run_id: smoke_atw_boil_sparsegp
+    seed: 4
+    algorithm: atw-boil-sparsegp
+    task:
+      name: dummy
+      curve_length: 40
+      noise_std: 1.5
+    search_space:
+      lr: {type: log_uniform, bounds: [0.0001, 0.01]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+    hpo: {max_trials: 6}
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.5
+      alpha_bounds: [0.0, 3.0]
+    gp:
+      inducing_points: 64
+
+  - run_id: smoke_freezethaw_bo
+    seed: 5
+    algorithm: freezethaw-bo
+    task:
+      name: dummy
+      curve_length: 40
+      noise_std: 1.5
+    search_space:
+      lr: {type: log_uniform, bounds: [0.0001, 0.01]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+    hpo: {max_trials: 6}
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]

@@ -1,0 +1,90 @@
+# Full experimental configuration for CartPole-v1 robustness & efficiency study.
+# Each algorithmic variation is run for a modest number of BO trials to keep the
+# example executable in <5 min on a modern laptop, while still exercising the
+# full pipeline.
+
+experiments:
+  - run_id: cartpole_boil_original
+    seed: 11
+    algorithm: boil-original
+    task:
+      name: cartpole
+      curve_length: 100
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 5e-2]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+    hpo: {max_trials: 15}
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+  - run_id: cartpole_atw_boil
+    seed: 12
+    algorithm: atw-boil
+    task:
+      name: cartpole
+      curve_length: 100
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 5e-2]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+    hpo: {max_trials: 15}
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.5
+      alpha_bounds: [0.0, 3.0]
+
+  - run_id: cartpole_atw_boil_no_logistic
+    seed: 13
+    algorithm: atw-boil-nologistic
+    task:
+      name: cartpole
+      curve_length: 100
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 5e-2]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+    hpo: {max_trials: 15}
+    compressor:
+      alpha: 0.5
+      alpha_bounds: [0.0, 3.0]
+
+  - run_id: cartpole_atw_boil_sparsegp
+    seed: 14
+    algorithm: atw-boil-sparsegp
+    task:
+      name: cartpole
+      curve_length: 100
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 5e-2]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+    hpo: {max_trials: 15}
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.5
+      alpha_bounds: [0.0, 3.0]
+    gp:
+      inducing_points: 256
+
+  - run_id: cartpole_freezethaw_bo
+    seed: 15
+    algorithm: freezethaw-bo
+    task:
+      name: cartpole
+      curve_length: 100
+    search_space:
+      lr: {type: log_uniform, bounds: [1e-4, 5e-2]}
+      gamma: {type: uniform, bounds: [0.8, 0.999]}
+    hpo: {max_trials: 15}
+    compressor:
+      midpoint: 0.0
+      growth: 1.0
+      alpha: 0.0
+      alpha_bounds: [0.0, 0.0]
+
+after_all:
+  generate_calibration_plots: true
+  statistical_tests: true
+  export_csv: true

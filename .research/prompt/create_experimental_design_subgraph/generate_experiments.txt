@@ -1,0 +1,198 @@
+
+Input:
+You are a cutting-edge AI researcher. Based on the new method described in # New Methods and the experimental policy outlined in # Experiment Strategy, please generate 2 distinct Experiment objects.
+
+# Instructions
+- Generate 2 major experimental lines (Experiment objects) based on the experimental strategy.
+- Each Experiment (identified by experiment_id) represents a different experimental perspective or validation angle.
+- Within each Experiment, run_variations are the variations that will be compared against each other (e.g., ["baseline", "proposed"], ["full-method", "ablation-A", "ablation-B"]).
+- Keep run_variations to 3-5 variations per experiment (including baseline and proposed method) to ensure reasonable execution time and resource usage.
+- Each Experiment should:
+    - Have a unique experiment_id (e.g., "exp-1", "exp-2", "exp-3")
+    - Have a clear description of its objective or hypothesis
+    - Have a list of run_variations that will be compared within this experiment
+    - Cover different aspects of validating the proposed method
+- The experiments should be complementary and cover various validation angles such as:
+    - Main performance validation
+    - Ablation studies
+    - Robustness tests
+    - Comparison with baselines
+    - Hyperparameter sensitivity analysis
+    - Computational efficiency analysis
+- Each experiment will have its own GitHub branch and code.
+- The run_variations within each experiment define different configurations or conditions to test (e.g., different hyperparameters, different baselines, different datasets).
+
+- Design the details of each experiment assuming the execution environment specified in "Experimental Environment."
+- The experimental details should include the following for each experiment:
+    - Machine learning / deep learning models to be used
+        - If necessary, also include baseline models.
+    - Datasets
+    - Dataset preprocessing methods
+    - Data splitting method (train/val/test, cross-validation)
+    - Number of repetitions (number of seeds), averaging method, and selection criteria (best-val, last, early stopping)
+    - Evaluation metrics
+        - Primary and secondary metrics
+        - Examples: Accuracy / F1 / AUROC (classification), RMSE / MAE (regression), mAP (detection), mIoU (segmentation), BLEU / ROUGE / METEOR (generation), NDCG / MRR (ranking), ECE / Brier Score (calibration)
+    - Comparisons
+        - Prior methods (strong baselines, SOTA, simple baselines), etc.
+        - If there are implementation or configuration differences, note the adjustments in footnotes.
+    - Methods for analyzing important hyperparameters (e.g., learning rate, temperature, k, thresholds)
+    - Methods for assessing robustness
+        - Resistance to noise injection, distribution shift (OOD), adversarial perturbations, and domain transfer
+    - Computation of FLOPs, training/inference time, memory usage, and cost / wall-clock time
+    - Example experimental code
+- Avoid excessive redundancy across experiments. When a single experiment can cover multiple validation items, integrate them appropriately.
+- NO-FALLBACK CONSTRAINT: Never suggest using synthetic/dummy/placeholder data.
+- Also provide:
+    - expected_models: A list of specific model names/architectures that will be used across all experiments (e.g., ["ResNet-50", "BERT-base", "GPT-3.5-turbo"])
+    - expected_datasets: A list of specific dataset names that will be used across all experiments (e.g., ["CIFAR-10", "ImageNet", "IMDB Reviews"])
+
+## Output Format
+Please provide:
+- experiments: A list of 2 Experiment objects, each with:
+    - experiment_id: Unique identifier
+    - run_variations: List of variation names/identifiers for this experiment
+    - description: Detailed description including all aspects mentioned in the instructions
+- expected_models: List of model names/architectures
+- expected_datasets: List of dataset names
+
+# Experimental Environment
+NVIDIA A100
+VRAM：80GB
+RAM：2048 GB
+
+# Current Research Method (Target for Experiment Design)
+{
+    "Open Problems": "BOIL compresses every training-curve y1:T into a single scalar using a fixed logistic weighting. \n1. The fixed weighting can over-emphasise noisy early iterations or under-value late stable progress, especially in very non-stationary DRL curves.\n2. The cost–aware acquisition already estimates monetary/CPU cost but ignores the reliability of the compressed target that feeds the GP.\nGoal: keep BOIL’s overall framework but make the compression more adaptive with one extra scalar hyper-parameter.",
+    "Methods": "Adaptive-Tail-Weighted BOIL (ATW-BOIL)\nMinimal change: introduce one additional weight exponent α≥0 in the learning-curve compression.\nCompressed score  sα  for a curve y1:T is\n   sα =  Σ_{t=1}^{T}  w_t(α) · y_t  /  Σ_{t=1}^{T} w_t(α)\nwhere  w_t(α)= ((t/T)+ε)^α · σ( (t−m)/g )\nσ is the same logistic sigmoid used in BOIL (with learnt midpoint m and growth g). ε=1e-9 avoids zero.\n• α=0 reproduces the original BOIL (uniform weights after the sigmoid).\n• α>0 smoothly tilts the score toward the tail (later, more reliable points) while still rewarding fast early learning.\nWe simply add α to the GP’s marginal-likelihood optimisation together with m and g (one extra dimension in hyper vector). The rest of the algorithm – GP, cost-sensitive EI, virtual observations – stays unchanged.\nTheoretical motivation: later portions of a curve have higher probability of reflecting asymptotic performance; weighting by (t/T)^α implements a Bayesian prior that later observations have lower variance. Jointly learning α lets the data decide how much early instability should be discounted.",
+    "Experimental Setup": "Baseline: original BOIL.\nDataset/task: CartPole-v1 reinforcement-learning agent (Dueling DQN) — same as paper but only 50 optimisation steps to keep it light.\nSearch space: learning-rate∈[1e-4,1e-2], γ∈[0.8,0.999], batch-size∈[32,256].\nBudget: each HPO method allowed 3×NVidia-1080Ti GPU-hours.\nEvaluation metric: best average reward over 10 evaluation episodes obtained within the budget; wall-clock time to reach 195 average reward (solved). \nComparison: BOIL vs ATW-BOIL (ours). 5 random seeds.",
+    "Experimental Code": "# ---- core change to curve compression ----\nimport numpy as np\n\ndef tail_weighted_logistic(curve, midpoint=0.0, growth=1.0, alpha=0.0):\n    \"\"\"Return single scalar score for a learning curve.\n    curve : 1-d array like, length T\n    \"\"\"\n    curve = np.asarray(curve, dtype=float)\n    T = len(curve)\n    t = np.arange(1, T+1, dtype=float)\n    # logistic part (original BOIL)\n    logistic = 1./(1.+np.exp(-growth*( (t/T) - midpoint)))\n    # NEW tail weight\n    weights = ((t/T)+1e-9)**alpha * logistic\n    weights /= weights.sum()\n    return (weights * curve).sum()\n\n# plug into BOIL by replacing transform_logistic\n\ndef transform_logistic(curves, midpoint=0.0, growth=1.0, alpha=0.0):\n    if isinstance(curves[0], (list, np.ndarray)):\n        return [tail_weighted_logistic(c, midpoint, growth, alpha) for c in curves]\n    else:  # single curve\n        return tail_weighted_logistic(curves, midpoint, growth, alpha)\n\n# During GP hyper-parameter optimisation simply treat [length_x,length_t,midpoint,growth,alpha] as vector\n# Bounds for alpha e.g. [0,3].",
+    "Expected Result": "Across 5 seeds ATW-BOIL reaches the CartPole \"solved\" threshold (~195) about 15-25% sooner (median 14 minutes vs 18 minutes) and finds slightly better hyper-parameters (mean final reward 199.2 vs 196.7). \nArea under best-seen-reward curve vs time is higher for ATW-BOIL in 4/5 runs. Computational overhead is negligible (one extra scalar in optimisation).",
+    "Expected Conclusion": "A single tail-weight exponent lets the compression adapt to the noisiness of early training, yielding a more reliable target for Bayesian optimisation. The modification is conceptually simple (one extra scalar, no new kernels or acquisition functions) yet measurably accelerates hyper-parameter search, demonstrating that careful treatment of learning-curve information can improve efficiency without overhauling existing BO frameworks."
+}
+
+# Experiment Strategy
+Overall Experimental Strategy for Validating ATW-BOIL
+
+0. Guiding Principle
+   Evaluate the proposed adaptive tail-weight against three orthogonal axes that matter for any practical HPO method: (1) optimisation quality, (2) resource efficiency, and (3) reliability / generality.  Every concrete experiment must produce evidence on at least two of these axes and collectively the whole suite must cover all three.
+
+1. Core Hypotheses to Validate
+   H1  Performance:  For a fixed compute budget, ATW-BOIL finds better hyper-parameters (higher task score) and/or reaches a target score sooner than original BOIL and other state-of-the-art (SOTA) curve-aware BO baselines.
+   H2  Efficiency:  The added α dimension does not noticeably increase wall-clock per-iteration overhead; overall GPU-hours are equal or lower for the same final score.
+   H3  Robustness:  Gains hold across tasks with different noise levels, curve shapes and search spaces, and across random seeds.
+   H4  Generalisation:  The single mechanism (learned α) transfers without retuning to supervised, RL and black-box optimisation tasks.
+
+2. Validation Dimensions & Required Evidence
+   a. Quantitative Optimisation Metrics
+      • Best-seen task score vs wall-clock time (area-under-curve, time-to-threshold)
+      • Final score at fixed budget
+      • Number of trials / GPU-hours to reach threshold
+   b. Surrogate-Model Metrics
+      • Negative log-likelihood (NLL) of GP on held-out curve scores
+      • Calibration error of posterior mean ±2σ
+   c. Computational Cost
+      • CPU time per BO iteration (including GP hyper-optimisation)
+      • Memory footprint on surrogate fit (leveraging 2048 GB cap)
+   d. Reliability / Stability
+      • Std-dev of key metrics over ≥10 random seeds
+      • Sensitivity analyses: varying search space size, budget scale, curve length
+   e. Qualitative Insight
+      • Visualise learnt α distribution over optimisation horizon
+      • Weight-heatmaps showing how early/late points are re-weighted
+
+3. Comparative Baselines (must appear in every experiment unless infeasible)
+   B1 Original BOIL (α≡0)
+   B2 Pure GP-BO on end-of-training score (no curve compression)
+   B3 State-of-the-art early-curve methods (e.g., Freeze-Thaw BO, FABOLAS, Learning-Curve-BO)
+   B4 Hyperband / ASHA (non-BO strong baseline for cost-aware HPO)
+   Ablations:
+      A1  ATW-BOIL with fixed α=0.5 (no learning)
+      A2  ATW-BOIL with α learned but logistic removed (test component synergy)
+
+4. Experimental Matrix (Tasks & Noise Levels)
+   Tier-1   Small-scale sanity (CartPole, CIFAR-10 subset, synthetic Branin)
+   Tier-2   Medium RL (Atari), vision (ImageNet-mini), language (Transformer on WikiText-2)
+   Tier-3   Highly non-stationary or long-horizon (MuJoCo Humanoid, large-scale pre-training subset)
+   Each tier increases curve length/variance to stress the method.
+
+5. Resource Budgeting Rules (per experiment)
+   • Identical GPU type (A100) and count for all methods.
+   • Wall-clock cap computed so that original BOIL completes ≤12 h; others get equal time.
+   • Repeat N=10 seeds; report mean±95 % CI.
+
+6. Success Criteria
+   Primary: ATW-BOIL improves median area-under-best-seen-score curve by ≥10 % AND/OR reduces time-to-threshold by ≥15 % with p<0.05 against B1.
+   Secondary: No more than 5 % increase in per-iteration wall-clock; surrogate NLL not worse than B1; improvements consistent (wins ≥70 % of seeds).
+   Tertiary: Positive or neutral results on robustness & generalisation tiers.
+
+7. Statistical Protocol
+   • Use paired tests (Wilcoxon signed-rank) for time-to-threshold and AUC.
+   • Holm–Bonferroni correction across tasks.
+   • Report effect sizes (Cohen’s d) alongside p-values.
+
+8. Reporting & Visualisation Standards
+   • For each task: log-scaled time-vs-score plots with median & inter-quartile ribbon.
+   • Aggregate win-rate tables.
+   • Surrogate calibration plots.
+   • Resource-usage bars (GPU-hours, CPU-hours, RAM).
+
+9. Reproducibility Infrastructure
+   • Containerised code (Docker), CUDA 11, PyTorch 2.x.
+   • Deterministic GPU seeds where hardware allows.
+   • Public release of raw curve logs, config files, and analysis notebooks.
+
+10. Risk Mitigation & Contingencies
+   • If α optimisation becomes numerically unstable, fall back to log-domain re-parameterisation.
+   • If GP scales poorly on long curves, enable sparse GP with inducing points ≤2048 (fits in 80 GB VRAM).
+
+This umbrella strategy ensures every forthcoming experiment consistently examines ATW-BOIL’s impact on quality, efficiency, and robustness, benchmarks it against credible alternatives, and validates claims through both statistical rigor and interpretability across a spectrum of realistic scenarios.
+
+---
+
+
+# Reference Information from Previous Iteration
+
+Output:
+{
+    "experiments": [
+        {
+            "experiment_id": "exp-1-main-multitask",
+            "run_variations": [
+                "GP-EndScore",
+                "BOIL-Original",
+                "ATW-BOIL",
+                "ATW-BOIL-fixedAlpha0.5",
+                "Hyperband-ASHA"
+            ],
+            "description": "Objective / Hypothesis:\nValidate H1 (performance) & H2 (efficiency) on a representative multi-task suite.  Test whether learning α improves optimisation quality and time-to-threshold without extra cost.\n\nTasks & Models:\n• CartPole-v1  – Dueling DQN (PyTorch)\n• CIFAR-10 (32×32) – ResNet-18\n• WikiText-2 language-model – 2-layer Transformer (d_model=384)\n\nDatasets & Pre-processing:\n• CartPole: standard OpenAI Gym; episodic reward smoothed over 10 eval episodes.\n• CIFAR-10: per-pixel mean/std normalisation; optional Cutout.\n• WikiText-2: tokenise with Moses; vocab size 33k; sentences ≤512 tokens.\n\nSearch Spaces (per task):\n• Learning rate, γ/weight-decay, batch size, network-width, dropout.\n3–6 dims, all continuous/log-uniform or categorical.\n\nBudget & Splits:\n• Each HPO method gets identical wall-clock cap that lets BOIL finish ≤12h on 1×A100 (CartPole 3h, CIFAR 8h, WikiText 10h).\n• Train/val/test: 80/10/10 (CIFAR, WikiText); RL uses eval episodes.\n\nSeeds & Aggregation:\n• 10 independent seeds; report mean±95% CI.\n• Selection by best validation score; early stopping patience 20 epochs.\n\nEvaluation Metrics:\nPrimary – Area-under-best-seen-score vs time (AUC-T); Time-to-threshold (≥195 reward / 92% accuracy / 34 ppl).\nSecondary – final test score at fixed budget, surrogate GP NLL.\n\nComparisons (run_variations):\n1  GP-EndScore: vanilla GP-BO using final epoch score only.\n2  BOIL-Original: Sigmoid compression, α≡0.\n3  ATW-BOIL: proposed method (α learned).\n4  ATW-BOIL-fixedAlpha0.5: ablation A1.\n5  Hyperband-ASHA: strong non-BO baseline.\n\nHyper-param Analysis:\nGrid-scan α∈{0,0.5,1,2} for fixed variant; record learned α trajectory.\n\nRobustness Checks:\n• Repeat with 25% label-noise on CIFAR-10; OOD validation (CIFAR-10-C corruption severity 3).\n• Report win-rate across noisy vs clean.\n\nResource Metrics:\n• Log CPU/GPU time per BO iteration, total GPU-hours, peak memory.  Use PyTorch profiler and nvidia-smi.\n• FLOPs per model recorded via fvcore.\n\nExample Code Snippet:\n```\nfrom boil import BOIL, ATWBOIL\noptimizer = ATWBOIL(search_space, gp_kernel='ARD-Matern52',\n                    alpha_init=0.3, alpha_bounds=(0,3))\nfor step in range(budget):\n    hp = optimizer.suggest()\n    score, curve = train_eval(hp)      # returns per-epoch list\n    optimizer.observe(hp, curve)\n```\nSuccess Criterion:\n≥10% AUC-T improvement & ≥15% faster threshold attainment vs BOIL-Original with p<0.05 on ≥2/3 tasks; ≤5% overhead/iteration.\n\nInfrastructure:\nDocker + CUDA11.8; PyTorch 2.1; deterministic cuDNN; results persisted in MLflow tracking.\n"
+        },
+        {
+            "experiment_id": "exp-2-robustness-efficiency",
+            "run_variations": [
+                "BOIL-Original",
+                "ATW-BOIL",
+                "ATW-BOIL-noLogistic",
+                "ATW-BOIL-SparseGP",
+                "FreezeThaw-BO"
+            ],
+            "description": "Objective / Hypothesis:\nStress-test H3 (robustness) & H2 (computational efficiency).  Measure how gains from adaptive tail-weight hold under distribution shift, adversarial curve noise, large search spaces and long horizons, while monitoring memory/FLOPs.\n\nPrimary Task Tier-2/3:\n• Atari PongNoFrameskip-v4 using Rainbow-DQN (200k env steps per trial).\n• ImageNet-mini (100 classes) with Vision-Transformer-Tiny.\n• MuJoCo Humanoid-v4 with PPO (3M env steps per trial).\n\nPre-processing & Augmentations:\n• Atari: gray-scale, frame-stack 4, reward-clipping.\n• ImageNet-mini: 224×224 random-resized-crop, RandAugment(2,9).\n• MuJoCo: standard observation normalisation.\n\nData Splits:\n• ImageNet-mini 80/10/10; Atari & MuJoCo use evaluation episodes every 50k env-steps.\n\nSearch Spaces:\n8–10 hyper-parameters including optimiser type (Adam/RMSProp), LR, entropy-coeff, patch-size (ViT), clip-range, etc.  Some categorical ‑> one-hot.\n\nExperimental Perturbations for Robustness:\n1. Gaussian noise σ=0.1 added to 30% of curve points.\n2. Random curve truncation (simulate early interruption) at 60% length.\n3. OOD validation: evaluate Pong agent on different starting states, ViT on ImageNet-V2.\n\nSeeds & Repetitions:\n5 seeds per perturbation × 3 tasks × 5 methods = 75 runs (manageable on 80GB A100 with parallelism).\n\nEvaluation Metrics:\nPrimary – Normalised Time-to-threshold (area under curve up to target reward 20, top-1 67% acc, average return 6k).\nSecondary – Robustness Score = mean(relative degradation) under perturbations; GP calibration ECE.\nEfficiency – GB-s (GPU-memory×time), total FLOPs, wall-clock.\n\nrun_variations Explained:\n• BOIL-Original: baseline.\n• ATW-BOIL: proposed.\n• ATW-BOIL-noLogistic: ablation A2 (remove logistic, keep α).\n• ATW-BOIL-SparseGP: identical to ATW but with 1024 inducing points (evaluates scalability).\n• FreezeThaw-BO: SOTA curve-aware baseline B3.\n\nHyperparameter Sensitivity:\n• Sobol sequence sampling over α∈[0,3], GP length-scale, inducing-points (128-4096).  Fit GAM to quantify marginal effects.\n\nComputational Profiling:\n• nvprof for CUDA kernels; measure forward+backward pass FLOPs per method.\n• Memory via PyTorch CUDA-summary; wall-clock via time.perf_counter.\n\nStatistical Analysis:\nPaired Wilcoxon on robustness score; linear mixed-effect model with task as random effect for efficiency metrics; Holm–Bonferroni correction.\n\nExample Code Snippet:\n```\nfrom gpytorch.models import SparseGPRegression\nmodel = SparseGPRegression(inducing_points=1024)\nbo = ATWBOIL(search_space, gp_model=model)\n...\nperturbed_curve = add_noise(curve, sigma=0.1) if noise_flag else curve\nbo.observe(hp, perturbed_curve)\n```\nSuccess Criteria:\nATW-BOIL wins ≥70% of robustness comparisons, median GB-s within ±5% of BOIL-Original; SparseGP variant cuts memory ≥40% while keeping ≤3% performance drop.\n\nRisk Mitigation:\nIf SparseGP diverges, fallback to 2048 inducing points or variational posterior with natural gradients.\n"
+        }
+    ],
+    "expected_models": [
+        "Dueling DQN",
+        "ResNet-18",
+        "Transformer-small",
+        "Rainbow-DQN",
+        "VisionTransformer-Tiny",
+        "PPO"
+    ],
+    "expected_datasets": [
+        "CartPole-v1",
+        "CIFAR-10",
+        "WikiText-2",
+        "Atari PongNoFrameskip-v4",
+        "ImageNet-mini",
+        "MuJoCo Humanoid-v4"
+    ]
+}

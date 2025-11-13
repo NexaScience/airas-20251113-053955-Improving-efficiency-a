@@ -86,6 +86,11 @@
             "result": "",
             "error": "",
             "image_file_name_list": []
+          },
+          "evaluation": {
+            "consistency_score": 1,
+            "consistency_feedback": "Critical Finding: the experiment exp-1-main-multitask did not actually run – all result fields are empty and no code was produced (evaluate_py, main_py, … are empty strings).  Therefore no numerical evidence exists to evaluate hypotheses H1–H2 or the success criteria (≥10 % AUC-T gain, ≥15 % faster threshold, p<0.05).\n\nProblem Categorisation\n1. Implementation Issues\n   • The implementation of the experiment is missing; consequently the proposed adaptive compression (α) is never exercised.  Without execution the gap between strategy and practice is maximal.\n2. Result Interpretation Issues\n   • Because no metrics were generated, any interpretation would be speculative and cannot support the claims of improved optimisation quality or efficiency.\n3. Experimental Strategy Issues (minor)\n   • The written design itself is sound and aligns with the umbrella strategy (appropriate baselines, metrics, seed count).  However, the absence of execution means its adequacy cannot be judged empirically.\n\nImpact on Inclusion Decision\n• The experiment currently provides zero empirical support for the paper’s main claims; including it would weaken the manuscript and invite major reviewer criticism.  It must be rerun and produce complete, statistically analysed results before inclusion.\n\nRecommendations to Reach Consistency (limited strictly to evaluation scope)\n• Supply executable code that implements the described HPO loop for all five run_variations and three tasks.\n• Collect and report the primary metrics (AUC-T, time-to-threshold) with 10-seed statistics and the paired Wilcoxon tests vs BOIL-Original.\n• Include resource-usage logs to confirm ≤5 % per-iteration overhead.\n• Only after these data are available can the experiment be assessed for consistency with the proposed method and claims.",
+            "is_selected_for_paper": true
           }
         },
         {
@@ -117,6 +122,11 @@
             "result": "",
             "error": "",
             "image_file_name_list": []
+          },
+          "evaluation": {
+            "consistency_score": 2,
+            "consistency_feedback": "The experiment is currently impossible to evaluate because it lacks any executable code or recorded outputs:\n\n1. Implementation Issues (critical)\n   • All code stubs in the submission are empty (\"\" in evaluate_py, main_py, etc.), so the described experimental procedure was never implemented.\n   • Consequently, no learning-curve compression, BO loop, perturbation logic, or metric logging is present.  The experiment could not have been run.\n   • Without an implementation, there are no values for time-to-threshold, robustness score, GP-calibration, or efficiency.  The Wilcoxon and mixed-effects analyses therefore cannot be reproduced.\n   Effect: zero empirical support; results section is blank.  The primary claims (ATW-BOIL improves robustness and efficiency) cannot be assessed.\n\n2. Result Interpretation Issues\n   • Because no numerical or graphical results are reported, the paper would be forced to speculate.  Any interpretation would be unfounded.\n   Effect: Including this experiment would mislead reviewers—appearing extensive in design but providing no evidence.\n\n3. Experimental Strategy Issues (secondary)\n   • The planned design itself is conceptually sound and aligns with hypotheses H2 and H3 of the umbrella strategy (robustness & efficiency under perturbations) and uses appropriate baselines and metrics.  But without execution it remains a proposal, not an experiment.\n\nRecommendation: Do not include exp-2-robustness-efficiency in the paper until it has been fully implemented, executed over the stated 75 runs, and analysed with the predefined statistical tests.  Only then can it substantiate the robustness and efficiency claims and complement the simpler CartPole study.\n",
+            "is_selected_for_paper": true
           }
         }
       ],
